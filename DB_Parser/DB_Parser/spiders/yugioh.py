@@ -4,6 +4,8 @@ from scrapy.http import Request
 from scrapy import Spider
 from DB_Parser.items import CardItem, CardMetaDataItem
 from scrapy.loader import ItemLoader
+from BeautifulSoup import BeautifulSoup
+from scrapy.http import HtmlResponse
 
 def NextURL():
     """
@@ -13,7 +15,7 @@ def NextURL():
     """
     list_of_urls = [ 
         "https://www.db.yugioh-card.com/yugiohdb/card_search.action?ope=2&cid=" + str(i)
-        for i in range(12590, 12591)
+        for i in range(12714, 12715)
     ]
     
     for next_url in list_of_urls:
@@ -51,24 +53,25 @@ class YugiohSpider(Spider):
         Parse the current response object, and return any Item and/or Request objects
         """
         self.log("SCRAPING '%s'" % response.url)
-        self.log(response.xpath('//*[@id="article_body"]/div/text()').extract_first().lstrip().rstrip())
+        self.log(response.xpath('//*[@id="article_body"]/div/text()').extract_first().strip())
         card = None
-        if not (response.xpath('//*[@id="article_body"]/div/text()').extract_first().lstrip() .rstrip() == 'No Data Found.'):
+        if not (response.xpath('//*[@id="article_body"]/div/text()').extract_first().strip() == 'No Data Found.'):
             item = ItemLoader(item=CardItem(), response=response)
             item.add_xpath('name', '//*[@id="broad_title"]/div/h1/text()')
-            item.add_xpath('card_description', '//*[@id="details"]/tbody/tr[5]/td/div/div')
-            item.add_xpath('card_type', '//*[@id="details"]/tbody/tr[1]/td/div/text()')
-            # item.add_xpath('attribute', '//*[@id="broad_title"]/div/h1/text()')
-            # item.add_xpath('level_rank', '//*[@id="broad_title"]/div/h1/text()')
-            # item.add_xpath('attack', '//*[@id="broad_title"]/div/h1/text()')
-            # item.add_xpath('defence', '//*[@id="broad_title"]/div/h1/text()')
-            # item.add_xpath('pendulum_scale', '//*[@id="broad_title"]/div/h1/text()')
-            # item.add_xpath('pendulum_effect', '//*[@id="broad_title"]/div/h1/text()')
-            # item.add_xpath('monster_card_type', '//*[@id="details"]/tbody/tr[3]/td/div/text()')
-            # item.add_xpath('monster_type', '//*[@id="broad_title"]/div/h1/text()')
+            item.add_xpath('card_description', '//*[@id="details"]/tr[5]/td/div')
+            item.add_xpath('card_type', '//*[@id="details"]/tr[3]/td/div')
+            item.add_xpath('attribute', '//*[@id="details"]/tr[1]/td[1]/div/span[2]/text()')
+            item.add_xpath('level_rank', '//*[@id="details"]/tr[1]/td[2]/div/span[2]/text()')
+            item.add_xpath('attack', '//*[@id="details"]/tr[4]/td[1]/div/span[2]/text()')
+            item.add_xpath('defence', '//*[@id="details"]/tr[4]/td[2]/div/span[2]/text()')
+            item.add_xpath('pendulum_scale', '//*[@id="details"]/tr[2]/td/div/text()')
+            item.add_xpath('pendulum_effect', '//*[@id="details"]/tr[3]/td/div/text()')
+            item.add_xpath('monster_card_type', '//*[@id="details"]/tr[3]/td/div/text()')
+            item.add_xpath('monster_type', '//*[@id="details"]/tr[2]/td/div/text()')
             # item.add_xpath('card_meta_data', '//*[@id="broad_title"]/div/h1/text()')
             card = item.load_item()
-            self.log(dict(card))
+            for k, v in dict(card).items():
+                self.log(k + ' : {}'.format(v))
         ## extract your data and yield as an Item (or DjangoItem if you're using django-celery)
 
         ## get the next URL to crawl
