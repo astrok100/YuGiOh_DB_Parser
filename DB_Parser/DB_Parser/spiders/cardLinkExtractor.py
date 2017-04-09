@@ -8,6 +8,8 @@ from scrapy.utils.python import unique as unique_list, to_native_str
 from six.moves.urllib.parse import urlparse, urljoin
 from scrapy.utils.response import get_base_url
 from scrapy.link import Link
+from DB_Parser.items import CardItem, CardMetaDataItem
+from scrapy.loader import ItemLoader
 
 class YuGiOhParserLink(LxmlParserLinkExtractor):
     def __init__(self, tag="a", attr="href", process=None, unique=False):
@@ -15,7 +17,6 @@ class YuGiOhParserLink(LxmlParserLinkExtractor):
         super(YuGiOhParserLink, self).__init__(
             tag=tag, attr=attr, process=process, unique=unique
         )
-        # self.attr = attr
 
     def _extract_links(self, selector, response_url, response_encoding, base_url):
         links = []
@@ -83,14 +84,14 @@ class CardLinkExtractor(CrawlSpider):
     name = "cardlink"
     allowed_domains = ["db.yugioh-card.com"]
     start_urls = [
-        'https://www.db.yugioh-card.com/yugiohdb/card_search.action?ope=1&sort=1&rp=100&page=1',
+        'https://www.db.yugioh-card.com/yugiohdb/card_search.action?ope=1&sort=1&rp=10&page=1',
     ]
     def process_next_page(value, attrs):
         if attrs.get('text_content') == u'\xbb':
             pattern = re.compile(r'javascript:ChangePage\((\d+)\)')
             m =  pattern.search(value)
             if m:
-                return 'https://www.db.yugioh-card.com/yugiohdb/card_search.action?ope=1&sort=1&rp=100&page={}'.format(
+                return 'https://www.db.yugioh-card.com/yugiohdb/card_search.action?ope=1&sort=1&rp=10&page={}'.format(
                     m.group(1))
     rules = [
         Rule(
@@ -105,17 +106,93 @@ class CardLinkExtractor(CrawlSpider):
         ),
         Rule(
             YuGiOhLinkExtractor(
-                allow=(r'card_search\.action\?ope=1&sort=1&rp=100&page='),
+                allow=(r'card_search\.action\?ope=1&sort=1&rp=10&page='),
                 process_value=process_next_page,
                 restrict_css='div[class=page_num] span a',
                 attrs=('href'),
                 tags='a'
             ),
-            follow=True
+            follow=False
         )
     ]
-    count =0
+
     def parse_card(self, response):
-        self.count+=1
-        print self.count
-        print response.xpath('//*[@id="broad_title"]/div/h1/text()').extract()[0].strip()
+
+        parse = self.get_parsing_function(response)
+        item = parse(response)
+        item.add_value('card_meta_data', self.meta_data(response))
+        card = item.load_item()
+        print "\n"
+        for k, v in dict(card).items():
+            self.log(k + ' : {}'.format(v))
+        print "\n"
+        
+
+    def get_parsing_function(self, response):
+
+        title_paths = ['//*[@id="details"]/tr[2]/td/div/span/b/text()', '//*[@id="details"]/tr[1]/td/div/span/b/text()']
+        title_type = {
+            'icon': self.parse_magic_trap,
+            'pendulum scale': self.parse_pendulum,
+            'monster type': self.parse_monster
+        }
+
+        for title_path in title_paths:
+            titles = response.xpath(title_path).extract()
+            for title in titles:
+                title = title.strip().lower()
+                if title_type.get(title, None):
+                    return title_type.get(title)
+
+    def parse_monster(self, response):
+        item = ItemLoader(item=CardItem(), response=response)
+        item.add_xpath('name', '//*[@id="broad_title"]/div/h1/text()')
+        item.add_xpath('attribute', '//*[@id="details"]/tr[1]/td[1]/div/span[@class="item_box_value"]/text()')
+        item.add_xpath('level_rank', '//*[@id="details"]/tr[1]/td[2]/div/span[@class="item_box_value"]/text()')
+        item.add_xpath('monster_type', '//*[@id="details"]/tr[2]/td/div/text()')
+        item.add_xpath('monster_card_type', '//*[@id="details"]/tr[3]/td/div/text()')
+        item.add_xpath('attack', '//*[@id="details"]/tr[4]/td[1]/div/span[@class="item_box_value"]/text()')
+        item.add_xpath('defence', '//*[@id="details"]/tr[4]/td[2]/div/span[@class="item_box_value"]/text()')
+        item.add_xpath('card_description', '//*[@id="details"]/tr[5]/td/div/text()')
+        item.add_value('card_type', 'Monster')
+        return item
+
+    def parse_magic_trap(self, response):
+
+        item = ItemLoader(item=CardItem(), response=response)
+        item.add_xpath('name', '//*[@id="broad_title"]/div/h1/text()')
+        item.add_xpath('card_description', '//*[@id="details"]/tr[2]/td/div/text()')
+        item.add_xpath('card_type', '//*[@id="details"]/tr[1]/td/div/text()')
+        return item
+
+    def parse_pendulum(self, response):
+        item = ItemLoader(item=CardItem(), response=response)
+        item.add_xpath('name', '//*[@id="broad_title"]/div/h1/text()')
+        item.add_xpath('attribute', '//*[@id="details"]/tr[1]/td[1]/div/span[@class="item_box_value"]/text()')
+        item.add_xpath('level_rank', '//*[@id="details"]/tr[1]/td[2]/div/span[@class="item_box_value"]/text()')
+        item.add_xpath('pendulum_scale', '//*[@id="details"]/tr[2]/td/div/text()')
+        item.add_xpath('pendulum_effect', '//*[@id="details"]/tr[3]/td/div/text()')
+        item.add_xpath('monster_type', '//*[@id="details"]/tr[4]/td/div/text()')
+        item.add_xpath('monster_card_type', '//*[@id="details"]/tr[5]/td/div/text()')
+        item.add_xpath('attack', '//*[@id="details"]/tr[6]/td[1]/div/span[@class="item_box_value"]/text()')
+        item.add_xpath('defence', '//*[@id="details"]/tr[6]/td[2]/div/span[@class="item_box_value"]/text()')
+        item.add_xpath('card_description', '//*[@id="details"]/tr[7]/td/div/text()')
+        item.add_value('card_type', 'Monster')
+        return item
+
+    def meta_data(self, response):
+        meta_data_selector = '//*[@id="pack_list"]/table/tr[@class="row"]'
+        meta_data = response.xpath(meta_data_selector)
+        table_column = {
+            "print_date": 'td[1]/text()',
+            "print_id": 'td[2]/text()',
+            "pack": 'td[3]/b/text()',
+            "rarity": 'td[4]/img/@alt'
+        }
+        items = []
+        for row in meta_data:
+            item = CardMetaDataItem()
+            for k, v in table_column.items():
+                item[k]= row.xpath(v).extract_first()
+            items.append(item)
+        return items
