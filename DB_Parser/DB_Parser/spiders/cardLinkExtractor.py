@@ -1,7 +1,6 @@
-import scrapy
+import re
 from scrapy.spiders import CrawlSpider, Rule
 from scrapy.linkextractors import LinkExtractor
-import re
 from lxml import etree
 from scrapy.linkextractors.lxmlhtml import LxmlParserLinkExtractor, _nons, _collect_string_content 
 from scrapy.utils.misc import arg_to_iter, rel_has_nofollow
@@ -17,9 +16,6 @@ class YuGiOhParserLink(LxmlParserLinkExtractor):
             tag=tag, attr=attr, process=process, unique=unique
         )
         # self.attr = attr
-        # print attr
-        # print "aaaaaaaaaaaa"
-        # print (el.text_content() == u'\xbb'), el.values()
 
     def _extract_links(self, selector, response_url, response_encoding, base_url):
         links = []
@@ -38,26 +34,33 @@ class YuGiOhParserLink(LxmlParserLinkExtractor):
             url = to_native_str(url, encoding=response_encoding)
             # to fix relative links after process_value
             url = urljoin(response_url, url)
-            print url
             link = Link(url, _collect_string_content(el) or u'',
                         nofollow=rel_has_nofollow(el.get('rel')))
+
             links.append(link)
         return self._deduplicate_if_needed(links)
 
+
 class YuGiOhLinkExtractor(LinkExtractor):
-    def __init__(self, *args, **kwargs):
-        self.tags = kwargs.get('tags')
-        self.attrs = kwargs.get('attrs')
+    def __init__(self, allow=(), deny=(), allow_domains=(), deny_domains=(), restrict_xpaths=(),
+                 tags=('a', 'area'), attrs=('href',), canonicalize=True,
+                 unique=True, process_value=None, deny_extensions=None, restrict_css=()):
+        self.tags = tags
+        self.attrs = attrs
         tag_func = lambda x: x in set(arg_to_iter(self.tags))
         attr_func = lambda x: x in set(arg_to_iter(self.attrs))
+
         super(YuGiOhLinkExtractor, self).__init__(
-            *args, **kwargs
+            allow=allow, deny=deny,
+            allow_domains=allow_domains, deny_domains=deny_domains,
+            restrict_xpaths=restrict_xpaths, restrict_css=restrict_css,
+            canonicalize=canonicalize, deny_extensions=deny_extensions
         )
 
         self.link_extractor = YuGiOhParserLink(
             tag=tag_func, attr=attr_func,
-            unique=kwargs.get('unique'),
-            process=kwargs.get('process_value')
+            unique=unique,
+            process=process_value
         )
 
 
@@ -80,14 +83,14 @@ class CardLinkExtractor(CrawlSpider):
     name = "cardlink"
     allowed_domains = ["db.yugioh-card.com"]
     start_urls = [
-        'https://www.db.yugioh-card.com/yugiohdb/card_search.action?ope=1&sort=1&rp=10&page=1',
+        'https://www.db.yugioh-card.com/yugiohdb/card_search.action?ope=1&sort=1&rp=100&page=1',
     ]
     def process_next_page(value, attrs):
         if attrs.get('text_content') == u'\xbb':
             pattern = re.compile(r'javascript:ChangePage\((\d+)\)')
             m =  pattern.search(value)
             if m:
-                return 'https://www.db.yugioh-card.com/yugiohdb/card_search.action?ope=1&sort=1&rp=10&page={}'.format(
+                return 'https://www.db.yugioh-card.com/yugiohdb/card_search.action?ope=1&sort=1&rp=100&page={}'.format(
                     m.group(1))
     rules = [
         Rule(
@@ -102,7 +105,7 @@ class CardLinkExtractor(CrawlSpider):
         ),
         Rule(
             YuGiOhLinkExtractor(
-                allow=('javascript'),
+                allow=(r'card_search\.action\?ope=1&sort=1&rp=100&page='),
                 process_value=process_next_page,
                 restrict_css='div[class=page_num] span a',
                 attrs=('href'),
