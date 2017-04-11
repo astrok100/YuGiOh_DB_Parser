@@ -88,3 +88,12 @@ AUTOTHROTTLE_TARGET_CONCURRENCY = 2.0
 #HTTPCACHE_DIR = 'httpcache'
 #HTTPCACHE_IGNORE_HTTP_CODES = []
 #HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
+
+DATABASE = {
+    'drivername': 'mysql',
+    'host': 'localhost',
+    'port': '3306',
+    'username': 'root',
+    'password': 'root',
+    'database': 'yugioh'
+}
