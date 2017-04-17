@@ -2,12 +2,13 @@ import re
 from urlparse import urlsplit, parse_qs
 from scrapy.loader import ItemLoader
 from scrapy.spiders import CrawlSpider, Rule
-from DB_Parser.yugioh_link_extractor import YuGiOhLinkExtractor, LinkExtractor
+from DB_Parser.ygo_link_extractor import YGOLinkExtractor, LinkExtractor
 from DB_Parser.items import CardItem, CardMetaDataItem
+from DB_Parser.spiders.ygo_parse_settings import  (
+    monster_card_settings, pendulum_card_settings, magic_card_settings)
 
-
-class YuGiOhCardExtractor(CrawlSpider):
-    name = "YuGiOh"
+class YGOCardExtractor(CrawlSpider):
+    name = "YGO"
     allowed_domains = ["db.yugioh-card.com"]
 
     url = 'https://www.db.yugioh-card.com/yugiohdb/card_search.action?ope=1&sort=1&rp=10&page={}'
@@ -16,45 +17,13 @@ class YuGiOhCardExtractor(CrawlSpider):
         url.format(1),
     ]
 
-    monster_card_settings = {
-        'name': '//*[@id="broad_title"]/div/h1/text()',
-        'attribute': '//*[@id="details"]/tr[1]/td[1]/div/span[@class="item_box_value"]/text()',
-        'level_rank': '//*[@id="details"]/tr[1]/td[2]/div/span[@class="item_box_value"]/text()',
-        'monster_type': '//*[@id="details"]/tr[2]/td/div/text()',
-        'monster_card_type': '//*[@id="details"]/tr[3]/td/div/text()',
-        'attack': '//*[@id="details"]/tr[4]/td[1]/div/span[@class="item_box_value"]/text()',
-        'defence': '//*[@id="details"]/tr[4]/td[2]/div/span[@class="item_box_value"]/text()',
-        'card_description': '//*[@id="details"]/tr[5]/td/div/text()',
-    }
-
-    pendulum_card_settings = {
-        'name': '//*[@id="broad_title"]/div/h1/text()',
-        'attribute': '//*[@id="details"]/tr[1]/td[1]/div/span[@class="item_box_value"]/text()',
-        'level_rank': '//*[@id="details"]/tr[1]/td[2]/div/span[@class="item_box_value"]/text()',
-        'pendulum_scale': '//*[@id="details"]/tr[2]/td/div/text()',
-        'pendulum_effect': '//*[@id="details"]/tr[3]/td/div/text()',
-        'monster_type': '//*[@id="details"]/tr[4]/td/div/text()',
-        'monster_card_type': '//*[@id="details"]/tr[5]/td/div/text()',
-        'attack': '//*[@id="details"]/tr[6]/td[1]/div/span[@class="item_box_value"]/text()',
-        'defence': '//*[@id="details"]/tr[6]/td[2]/div/span[@class="item_box_value"]/text()',
-        'card_description': '//*[@id="details"]/tr[7]/td/div/text()',
-    }
-
-
-    magic_card_settings = {
-        'name': '//*[@id="broad_title"]/div/h1/text()',
-        'card_description': '//*[@id="details"]/tr[2]/td/div/text()',
-        'card_type': '//*[@id="details"]/tr[1]/td/div/text()',
-    }
-
-
     def process_next_page(value, attrs):
         # >> = \xbb
         if attrs.get('text_content') == u'\xbb':
             pattern = re.compile(r'javascript:ChangePage\((\d+)\)')
             m =  pattern.search(value)
             if m:
-                return YuGiOhCardExtractor.url.format(
+                return YGOCardExtractor.url.format(
                     m.group(1))
 
     rules = [
@@ -69,7 +38,7 @@ class YuGiOhCardExtractor(CrawlSpider):
             follow=True
         ),
         Rule(
-            YuGiOhLinkExtractor(
+            YGOLinkExtractor(
                 allow=(r'card_search\.action\?ope=1&sort=1&rp=10&page='),
                 process_value=process_next_page,
                 restrict_css='div[class=page_num] span a',
@@ -89,16 +58,16 @@ class YuGiOhCardExtractor(CrawlSpider):
     def get_parsing_settings(self, response):
 
         title_paths = [
-            #monster card
+            # monster card
             '//*[@id="details"]/tr[2]/td/div/span/b/text()',
-            #magic card
+            # magic card
             '//*[@id="details"]/tr[1]/td/div/span/b/text()'
         ]
 
         title_type = {
-            'icon': self.magic_card_settings,
-            'pendulum scale': self.pendulum_card_settings,
-            'monster type': self.monster_card_settings
+            'icon': magic_card_settings,
+            'pendulum scale': pendulum_card_settings,
+            'monster type': monster_card_settings
         }
 
         for title_path in title_paths:

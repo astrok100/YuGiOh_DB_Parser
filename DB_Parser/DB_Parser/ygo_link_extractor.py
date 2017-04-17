@@ -7,9 +7,9 @@ from scrapy.utils.python import unique as unique_list, to_native_str
 from six.moves.urllib.parse import urljoin
 from scrapy.utils.response import get_base_url
 
-class YuGiOhParserLink(LxmlParserLinkExtractor):
+class YGOParserLink(LxmlParserLinkExtractor):
     def __init__(self, tag="a", attr="href", process=None, unique=False):
-        super(YuGiOhParserLink, self).__init__(
+        super(YGOParserLink, self).__init__(
             tag=tag, attr=attr, process=process, unique=unique
         )
 
@@ -37,7 +37,7 @@ class YuGiOhParserLink(LxmlParserLinkExtractor):
         return self._deduplicate_if_needed(links)
 
 
-class YuGiOhLinkExtractor(LinkExtractor):
+class YGOLinkExtractor(LinkExtractor):
     def __init__(self, allow=(), deny=(), allow_domains=(), deny_domains=(), restrict_xpaths=(),
                  tags=('a', 'area'), attrs=('href',), canonicalize=True,
                  unique=True, process_value=None, deny_extensions=None, restrict_css=()):
@@ -46,14 +46,14 @@ class YuGiOhLinkExtractor(LinkExtractor):
         tag_func = lambda x: x in set(arg_to_iter(self.tags))
         attr_func = lambda x: x in set(arg_to_iter(self.attrs))
 
-        super(YuGiOhLinkExtractor, self).__init__(
+        super(YGOLinkExtractor, self).__init__(
             allow=allow, deny=deny,
             allow_domains=allow_domains, deny_domains=deny_domains,
             restrict_xpaths=restrict_xpaths, restrict_css=restrict_css,
             canonicalize=canonicalize, deny_extensions=deny_extensions
         )
 
-        self.link_extractor = YuGiOhParserLink(
+        self.link_extractor = YGOParserLink(
             tag=tag_func, attr=attr_func,
             unique=unique,
             process=process_value
