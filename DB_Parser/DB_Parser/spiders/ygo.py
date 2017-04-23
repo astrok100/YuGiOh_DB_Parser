@@ -7,11 +7,11 @@ from DB_Parser.items import CardItem, CardMetaDataItem
 from DB_Parser.spiders.ygo_parse_settings import  (
     monster_card_settings, pendulum_card_settings, magic_card_settings)
 
-class YGOCardExtractor(CrawlSpider):
+class YGOSpider(CrawlSpider):
     name = "YGO"
     allowed_domains = ["db.yugioh-card.com"]
 
-    url = 'https://www.db.yugioh-card.com/yugiohdb/card_search.action?ope=1&sort=1&rp=10&page={}'
+    url = 'https://www.db.yugioh-card.com/yugiohdb/card_search.action?ope=1&sort=1&rp=100&page={}'
 
     start_urls = [
         url.format(1),
@@ -23,9 +23,10 @@ class YGOCardExtractor(CrawlSpider):
             pattern = re.compile(r'javascript:ChangePage\((\d+)\)')
             m =  pattern.search(value)
             if m:
+                print YGOCardExtractor.url.format(
+                    m.group(1))
                 return YGOCardExtractor.url.format(
                     m.group(1))
-
     rules = [
         Rule(
             LinkExtractor(
@@ -39,13 +40,13 @@ class YGOCardExtractor(CrawlSpider):
         ),
         Rule(
             YGOLinkExtractor(
-                allow=(r'card_search\.action\?ope=1&sort=1&rp=10&page='),
+                allow=(r'card_search\.action\?ope=1&sort=1&rp=100&page='),
                 process_value=process_next_page,
                 restrict_css='div[class=page_num] span a',
                 attrs=('href'),
                 tags='a'
             ),
-            follow=False
+            follow=True
         )
     ]
 
@@ -85,8 +86,7 @@ class YGOCardExtractor(CrawlSpider):
         if card_type != 'icon':
             item.add_value('card_type', 'Monster')
         item.add_value('card_meta_data', self.meta_data(response))
-        cgi = urlsplit(response.url).query
-        cgi = parse_qs(cgi)
+        cgi = parse_qs(urlsplit(response.url).query)
         item.add_value('yugioh_cid', cgi.get('cid'))
         card = item.load_item()
         return card

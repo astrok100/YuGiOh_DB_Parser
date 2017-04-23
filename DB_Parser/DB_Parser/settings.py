@@ -14,6 +14,8 @@ BOT_NAME = 'DB_Parser'
 SPIDER_MODULES = ['DB_Parser.spiders']
 NEWSPIDER_MODULE = 'DB_Parser.spiders'
 
+LOG_LEVEL = "INFO"
+LOG_STDOUT = True
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 #USER_AGENT = 'DB_Parser (+http://www.yourdomain.com)'
@@ -33,7 +35,7 @@ ROBOTSTXT_OBEY = False
 #CONCURRENT_REQUESTS_PER_IP = 16
 
 # Disable cookies (enabled by default)
-#COOKIES_ENABLED = False
+COOKIES_ENABLED = False
 
 # Disable Telnet Console (enabled by default)
 #TELNETCONSOLE_ENABLED = False
@@ -65,7 +67,8 @@ ROBOTSTXT_OBEY = False
 # Configure item pipelines
 # See http://scrapy.readthedocs.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-   'DB_Parser.pipelines.CardPipeline': 300,
+   'DB_Parser.pipelines.JSONPipeline': 300,
+   'DB_Parser.pipelines.DBPipeline': 400,
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)
@@ -77,16 +80,16 @@ AUTOTHROTTLE_START_DELAY = 5
 AUTOTHROTTLE_MAX_DELAY = 60
 # The average number of requests Scrapy should be sending in parallel to
 # each remote server
-AUTOTHROTTLE_TARGET_CONCURRENCY = 2.0
+AUTOTHROTTLE_TARGET_CONCURRENCY = 5.0
 # Enable showing throttling stats for every response received:
 #AUTOTHROTTLE_DEBUG = False
 
 # Enable and configure HTTP caching (disabled by default)
 # See http://scrapy.readthedocs.org/en/latest/topics/downloader-middleware.html#httpcache-middleware-settings
-#HTTPCACHE_ENABLED = True
-#HTTPCACHE_EXPIRATION_SECS = 0
-#HTTPCACHE_DIR = 'httpcache'
-#HTTPCACHE_IGNORE_HTTP_CODES = []
+HTTPCACHE_ENABLED = True
+HTTPCACHE_EXPIRATION_SECS = 60
+# HTTPCACHE_DIR = 'httpcache'
+# HTTPCACHE_IGNORE_HTTP_CODES = []
 #HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
 
 DATABASE = {
